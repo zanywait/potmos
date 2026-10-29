@@ -3,7 +3,7 @@
    - 아이콘/매니페스트 등 정적 파일은 "캐시 우선".
    - API·다른 도메인 요청은 건드리지 않는다(서버 연결 시 데이터가 캐시되지 않도록).
    배포 후 캐시를 강제로 새로 받게 하려면 VERSION 만 올리면 된다. */
-const VERSION = 'potmos-v22';
+const VERSION = 'potmos-v23';
 const SHELL = [
   './',
   './index.html',
