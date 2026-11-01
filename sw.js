@@ -3,7 +3,7 @@
    - 아이콘/매니페스트 등 정적 파일은 "캐시 우선".
    - API·다른 도메인 요청은 건드리지 않는다(서버 연결 시 데이터가 캐시되지 않도록).
    배포 후 캐시를 강제로 새로 받게 하려면 VERSION 만 올리면 된다. */
-const VERSION = 'potmos-v61';
+const VERSION = 'potmos-v62';
 const SHELL = [
   './',
   './index.html',
@@ -35,6 +35,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  if (/^\/ops(\/|$)/.test(url.pathname)) return;   // 라운드 84: 운영 콘솔(PWA)은 자기 서비스 워커가 맡는다 — 앱 캐시(index.html)에 섞이지 않게
 
   // 라운드 37: 공개 약관 페이지(refund.html 등)는 그대로 네트워크에서 — 앱 화면(index.html) 캐시에 섞이지 않게
   if (req.mode === 'navigate' && /\/[a-z]+\.html$/i.test(url.pathname) && !/\/index\.html$/i.test(url.pathname)) {

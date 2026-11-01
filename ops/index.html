@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="robots" content="noindex, nofollow"/>
+<meta name="theme-color" content="#0b0d12"/>
+<title>POTMOS 운영 콘솔</title>
+<link rel="manifest" href="./manifest.webmanifest"/>
+<link rel="icon" href="./icon-192.png"/>
+<link rel="apple-touch-icon" href="./icon-192.png"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<style>
+  :root{ color-scheme:dark; }
+  body{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:#0b0d12; color:#e9e4d8; font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif; }
+  .box{ width:min(360px, calc(100vw - 32px)); padding:24px 20px; border-radius:16px; background:#12151d; border:1px solid #232835; }
+  h1{ margin:0 0 4px; font-size:18px; color:#e8c35a; } p{ margin:0 0 16px; font-size:12px; color:#8b8f9c; line-height:1.6; }
+  label{ display:block; font-size:11px; color:#8b8f9c; margin:10px 0 4px; }
+  input[type=text], input[type=password]{ width:100%; box-sizing:border-box; padding:10px 12px; border-radius:10px; border:1px solid #2a3040; background:#0b0d12; color:#fff; font-size:14px; }
+  .row{ display:flex; align-items:center; gap:8px; margin-top:12px; font-size:12px; color:#b9b4a8; } .row input{ width:16px; height:16px; }
+  button{ width:100%; margin-top:16px; padding:11px; border:0; border-radius:10px; background:#e8c35a; color:#1b1406; font-weight:800; font-size:14px; cursor:pointer; }
+  button:disabled{ opacity:.5; } .err{ color:#ff8a8a; font-size:12px; min-height:16px; margin-top:10px; }
+  .hint{ font-size:11px; color:#6c7080; margin-top:14px; line-height:1.6; } details summary{ cursor:pointer; color:#8b8f9c; font-size:11px; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="box" id="box">
+  <h1>POTMOS 운영 콘솔</h1>
+  <p>관리자 키가 맞을 때만 콘솔이 열려요. 홈 화면에 추가하면 앱처럼 쓰고, 아이콘을 길게 누르면 <b>실시간 지표</b>로 바로 들어가요.</p>
+  <label for="k">관리자 키</label><input id="k" type="password" autocomplete="current-password"/>
+  <div class="row"><input id="rem" type="checkbox"/><label for="rem" style="margin:0;">이 기기에 기억하기(내 기기에서만)</label></div>
+  <details><summary>서버 주소</summary><label for="a">API</label><input id="a" type="text"/></details>
+  <button id="go">열기</button>
+  <div class="err" id="err"></div>
+  <div class="hint">잠금 화면 · 홈 화면 위젯은 웹 앱이 만들 수 없어서, '실시간 지표' 바로가기(30초마다 새로고침)와 앱 아이콘 배지(처리 대기 건수)로 대신해요.</div>
+</div>
+<script>
+(function(){
+  const API_DEFAULT = 'https://neetxnkcmzwkxvircoxm.supabase.co/functions/v1/api';
+  const q = new URLSearchParams(location.search), $ = id => document.getElementById(id);
+  const get = k => { try{ return localStorage.getItem(k) || sessionStorage.getItem(k); }catch(e){ return null; } };
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+  $('a').value = get('potmos_ops_api') || API_DEFAULT;
+  async function open(api, key, remember){
+    $('go').disabled = true; $('err').textContent = '';
+    try{
+      const r = await fetch(api.replace(/\/+$/, '') + '/admin/console', { headers:{ 'X-Admin-Key':key } });
+      const j = await r.json().catch(() => ({}));
+      if(!r.ok || !j.html) throw new Error(r.status === 403 || r.status === 401 ? '관리자 키가 올바르지 않아요' : (j.message || '콘솔을 불러오지 못했어요(' + r.status + ')'));
+      try{ const st = remember ? localStorage : sessionStorage; st.setItem('potmos_ops_key', key); st.setItem('potmos_ops_api', api); if(!remember) localStorage.removeItem('potmos_ops_key'); }catch(e){}
+      const shell = { api:api.replace(/\/+$/, ''), key, view:q.get('view') || '', page:q.get('page') || '' };
+      const head = '<head><link rel="manifest" href="./manifest.webmanifest"/><link rel="apple-touch-icon" href="./icon-192.png"/><meta name="theme-color" content="#0b0d12"/><meta name="robots" content="noindex, nofollow"/>'
+        + '<script>window.__ADMIN_SHELL__=' + JSON.stringify(shell).replace(/</g, '\\u003c') + ';<\/script>';
+      const html = String(j.html).replace(/<head>/i, head);
+      document.open(); document.write(html); document.close();
+    }catch(e){ $('err').textContent = e.message; $('go').disabled = false; }
+  }
+  $('go').addEventListener('click', () => { const k = $('k').value.trim(); if(!k){ $('err').textContent = '관리자 키를 넣어 주세요'; return; } open($('a').value.trim() || API_DEFAULT, k, $('rem').checked); });
+  $('k').addEventListener('keydown', e => { if(e.key === 'Enter') $('go').click(); });
+  const saved = get('potmos_ops_key'); if(saved) open(get('potmos_ops_api') || API_DEFAULT, saved, !!(function(){ try{ return localStorage.getItem('potmos_ops_key'); }catch(e){ return null; } })());
+})();
+</script>
+</body>
+</html>
