@@ -16,7 +16,7 @@
   .box{ width:min(360px, calc(100vw - 32px)); padding:24px 20px; border-radius:16px; background:#12151d; border:1px solid #232835; }
   h1{ margin:0 0 4px; font-size:18px; color:#e8c35a; } p{ margin:0 0 16px; font-size:12px; color:#8b8f9c; line-height:1.6; }
   label{ display:block; font-size:11px; color:#8b8f9c; margin:10px 0 4px; }
-  input[type=text], input[type=password]{ width:100%; box-sizing:border-box; padding:10px 12px; border-radius:10px; border:1px solid #2a3040; background:#0b0d12; color:#fff; font-size:14px; }
+  input[type=text], input[type=password], input[inputmode]{ width:100%; box-sizing:border-box; padding:10px 12px; border-radius:10px; border:1px solid #2a3040; background:#0b0d12; color:#fff; font-size:14px; }
   .row{ display:flex; align-items:center; gap:8px; margin-top:12px; font-size:12px; color:#b9b4a8; } .row input{ width:16px; height:16px; }
   button{ width:100%; margin-top:16px; padding:11px; border:0; border-radius:10px; background:#e8c35a; color:#1b1406; font-weight:800; font-size:14px; cursor:pointer; }
   button:disabled{ opacity:.5; } .err{ color:#ff8a8a; font-size:12px; min-height:16px; margin-top:10px; }
@@ -26,38 +26,91 @@
 <body>
 <div class="box" id="box">
   <h1>POTMOS 운영 콘솔</h1>
-  <p>관리자 키가 맞을 때만 콘솔이 열려요. 홈 화면에 추가하면 앱처럼 쓰고, 아이콘을 길게 누르면 <b>실시간 지표</b>로 바로 들어가요.</p>
-  <label for="k">관리자 키</label><input id="k" type="password" autocomplete="current-password"/>
-  <div class="row"><input id="rem" type="checkbox"/><label for="rem" style="margin:0;">이 기기에 기억하기(내 기기에서만)</label></div>
-  <details><summary>서버 주소</summary><label for="a">API</label><input id="a" type="text"/></details>
-  <button id="go">열기</button>
+  <!-- 라운드 106: 2단계 인증 — 관리자 키 + OTP 앱(구글 OTP 등) 6자리 코드 → 8시간 세션. 키 자체는 이 기기에 저장하지 않는다 -->
+  <div id="v-login">
+    <p>관리자 키와 <b>OTP 앱의 6자리 코드</b>를 넣어 주세요. 로그인은 8시간 유지돼요. 홈 화면에 추가하면 앱처럼 쓰고, 아이콘을 길게 누르면 <b>실시간 지표</b>로 바로 들어가요.</p>
+    <label for="k">관리자 키 <span style="opacity:.6">(Supabase › Edge Functions › Secrets 의 ADMIN_KEY 값)</span></label><input id="k" type="password" autocomplete="current-password"/>
+    <label for="c">인증 코드 <span style="opacity:.6">(OTP 앱 6자리 · 휴대폰을 잃었으면 복구 코드)</span></label><input id="c" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="12" placeholder="123456"/>
+    <div class="row"><input id="rem" type="checkbox"/><label for="rem" style="margin:0;">이 기기에서 8시간 로그인 유지(내 기기에서만)</label></div>
+    <details><summary>서버 주소</summary><label for="a">API</label><input id="a" type="text"/></details>
+    <button id="go">로그인</button>
+  </div>
+  <div id="v-enroll" style="display:none;">
+    <p><b>2단계 인증 처음 설정</b> · 휴대폰에 <b>Google Authenticator</b>(또는 Microsoft Authenticator 등 OTP 앱)를 설치하고, 앱의 <b>＋ → QR 코드 스캔</b>으로 아래를 찍어 주세요. QR 을 못 찍으면 '설정 키 입력'에 아래 글자를 넣으면 돼요.</p>
+    <div id="qr" style="display:flex;justify-content:center;background:#fff;border-radius:10px;padding:10px;margin:6px 0 8px;"></div>
+    <div style="font-family:ui-monospace,monospace;font-size:13px;letter-spacing:1px;word-break:break-all;color:#e8c35a;text-align:center;" id="sec"></div>
+    <label for="c2">OTP 앱에 새로 생긴 POTMOS 의 6자리 코드</label><input id="c2" type="text" inputmode="numeric" maxlength="6" placeholder="123456"/>
+    <button id="go2">등록 확인</button>
+  </div>
+  <div id="v-rec" style="display:none;">
+    <p><b>복구 코드 8개</b> — 휴대폰을 잃어버렸을 때 OTP 코드 대신 한 번씩 쓸 수 있어요. <b>지금 꼭 따로 적어 두세요</b>(이 화면을 닫으면 다시 볼 수 없어요). 사진이나 비밀번호 관리 앱에 저장해도 돼요.</p>
+    <div id="rec" style="font-family:ui-monospace,monospace;font-size:14px;line-height:1.9;letter-spacing:1px;text-align:center;background:#0b0d12;border:1px solid #2a3040;border-radius:10px;padding:10px;"></div>
+    <div class="row"><input id="saved" type="checkbox"/><label for="saved" style="margin:0;">복구 코드를 안전한 곳에 적어 두었어요</label></div>
+    <button id="go3" disabled>콘솔 열기</button>
+  </div>
   <div class="err" id="err"></div>
-  <div class="hint">잠금 화면 · 홈 화면 위젯은 웹 앱이 만들 수 없어서, '실시간 지표' 바로가기(30초마다 새로고침)와 앱 아이콘 배지(처리 대기 건수)로 대신해요.</div>
+  <div class="hint">· 키나 코드를 5번 틀리면 15분 동안 잠겨요 · 로그인은 8시간 뒤 자동으로 끝나요<br/>· 잠금 화면 · 홈 화면 위젯은 웹 앱이 만들 수 없어서, '실시간 지표' 바로가기(30초마다 새로고침)와 앱 아이콘 배지(처리 대기 건수)로 대신해요</div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 (function(){
   const API_DEFAULT = 'https://api.potmos.kr/functions/v1/api';   // 라운드 104: Supabase 사용자 지정 도메인(옛 supabase.co 주소도 계속 동작)
   const q = new URLSearchParams(location.search), $ = id => document.getElementById(id);
   const get = k => { try{ return localStorage.getItem(k) || sessionStorage.getItem(k); }catch(e){ return null; } };
+  const del = k => { try{ localStorage.removeItem(k); sessionStorage.removeItem(k); }catch(e){} };
   if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+  del('potmos_ops_key');                                                     // 라운드 106: 예전처럼 관리자 키 자체를 기기에 남기지 않는다
   $('a').value = get('potmos_ops_api') || API_DEFAULT;
-  async function open(api, key, remember){
+  const api = () => ($('a').value.trim() || API_DEFAULT).replace(/\/+$/, '');
+  const show = v => { ['v-login','v-enroll','v-rec'].forEach(id => $(id).style.display = id === v ? '' : 'none'); $('err').textContent = ''; };
+  async function post(path, body){
+    const r = await fetch(api() + path, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(body) });
+    const j = await r.json().catch(() => ({})); if(!r.ok){ const e = new Error(j.message || ('요청 실패(' + r.status + ')')); e.code = j.code; throw e; } return j;
+  }
+  let pend = null;                                                           // 등록 중: { key, token, remember }
+  async function open(token, remember){
+    const a = api();
+    const r = await fetch(a + '/admin/console', { headers:{ 'X-Admin-Key':token } });
+    const j = await r.json().catch(() => ({}));
+    if(!r.ok || !j.html){ const e = new Error(r.status === 401 ? '로그인이 끝났어요 · 다시 로그인해 주세요' : (j.message || '콘솔을 불러오지 못했어요(' + r.status + ')')); e.code = j.code; throw e; }
+    try{ const st = remember ? localStorage : sessionStorage; del('potmos_ops_tok'); st.setItem('potmos_ops_tok', token); st.setItem('potmos_ops_api', a); }catch(e){}
+    const shell = { api:a, key:token, view:q.get('view') || '', page:q.get('page') || '' };
+    const head = '<head><link rel="manifest" href="./manifest.webmanifest"/><link rel="apple-touch-icon" href="./icon-192.png"/><meta name="theme-color" content="#0b0d12"/><meta name="robots" content="noindex, nofollow"/>'
+      + '<script>window.__ADMIN_SHELL__=' + JSON.stringify(shell).replace(/</g, '\\u003c') + ';<\/script>';
+    document.open(); document.write(String(j.html).replace(/<head>/i, head)); document.close();
+  }
+  $('go').addEventListener('click', async () => {
+    const key = $('k').value.trim(), code = $('c').value.trim(), remember = $('rem').checked;
+    if(!key){ $('err').textContent = '관리자 키를 넣어 주세요'; return; }
     $('go').disabled = true; $('err').textContent = '';
     try{
-      const r = await fetch(api.replace(/\/+$/, '') + '/admin/console', { headers:{ 'X-Admin-Key':key } });
-      const j = await r.json().catch(() => ({}));
-      if(!r.ok || !j.html) throw new Error(r.status === 403 || r.status === 401 ? '관리자 키가 올바르지 않아요' : (j.message || '콘솔을 불러오지 못했어요(' + r.status + ')'));
-      try{ const st = remember ? localStorage : sessionStorage; st.setItem('potmos_ops_key', key); st.setItem('potmos_ops_api', api); if(!remember) localStorage.removeItem('potmos_ops_key'); }catch(e){}
-      const shell = { api:api.replace(/\/+$/, ''), key, view:q.get('view') || '', page:q.get('page') || '' };
-      const head = '<head><link rel="manifest" href="./manifest.webmanifest"/><link rel="apple-touch-icon" href="./icon-192.png"/><meta name="theme-color" content="#0b0d12"/><meta name="robots" content="noindex, nofollow"/>'
-        + '<script>window.__ADMIN_SHELL__=' + JSON.stringify(shell).replace(/</g, '\\u003c') + ';<\/script>';
-      const html = String(j.html).replace(/<head>/i, head);
-      document.open(); document.write(html); document.close();
-    }catch(e){ $('err').textContent = e.message; $('go').disabled = false; }
-  }
-  $('go').addEventListener('click', () => { const k = $('k').value.trim(); if(!k){ $('err').textContent = '관리자 키를 넣어 주세요'; return; } open($('a').value.trim() || API_DEFAULT, k, $('rem').checked); });
-  $('k').addEventListener('keydown', e => { if(e.key === 'Enter') $('go').click(); });
-  const saved = get('potmos_ops_key'); if(saved) open(get('potmos_ops_api') || API_DEFAULT, saved, !!(function(){ try{ return localStorage.getItem('potmos_ops_key'); }catch(e){ return null; } })());
+      const r = await post('/admin/login', { key, code });
+      if(r.needEnroll){                                                      // 처음: OTP 앱 등록
+        const s = await post('/admin/totp/setup', { key }); pend = { key, remember };
+        $('sec').textContent = s.secret.replace(/(.{4})/g, '$1 ').trim();
+        try{ const qr = qrcode(0, 'M'); qr.addData(s.otpauth); qr.make(); $('qr').innerHTML = qr.createSvgTag(4, 0); }catch(e){ $('qr').style.display = 'none'; }
+        show('v-enroll'); $('c2').focus(); return;
+      }
+      if(typeof r.recoveryLeft === 'number' && r.recoveryLeft <= 2) alert('복구 코드가 ' + r.recoveryLeft + '개 남았어요 · 콘솔 › 🔐 보안에서 휴대폰을 다시 등록하면 새 복구 코드를 받아요');
+      await open(r.token, remember);
+    }catch(e){ $('err').textContent = e.code === 'bad_otp' && !code ? '인증 코드(6자리)를 넣어 주세요' : e.message; }
+    finally{ $('go').disabled = false; }
+  });
+  $('go2').addEventListener('click', async () => {
+    if(!pend) return show('v-login');
+    $('go2').disabled = true; $('err').textContent = '';
+    try{ const r = await post('/admin/totp/confirm', { key:pend.key, code:$('c2').value.trim() }); pend.token = r.token; pend.key = null;
+      $('rec').innerHTML = r.recovery.map(x => x.replace(/(.{5})/, '$1-')).join('<br/>'); show('v-rec'); }
+    catch(e){ $('err').textContent = e.code === 'setup_expired' ? e.message : e.message; if(e.code === 'setup_expired') show('v-login'); }
+    finally{ $('go2').disabled = false; }
+  });
+  $('saved').addEventListener('change', () => { $('go3').disabled = !$('saved').checked; });
+  $('go3').addEventListener('click', async () => { try{ await open(pend.token, pend.remember); }catch(e){ $('err').textContent = e.message; show('v-login'); } });
+  $('k').addEventListener('keydown', e => { if(e.key === 'Enter') $('c').focus(); });
+  $('c').addEventListener('keydown', e => { if(e.key === 'Enter') $('go').click(); });
+  $('c2').addEventListener('keydown', e => { if(e.key === 'Enter') $('go2').click(); });
+  const tok = get('potmos_ops_tok');
+  if(tok) open(tok, !!(function(){ try{ return localStorage.getItem('potmos_ops_tok'); }catch(e){ return null; } })()).catch(e => { del('potmos_ops_tok'); $('err').textContent = e.message; });
 })();
 </script>
 </body>
