@@ -23,7 +23,7 @@
 <script>
 (function(){
   var q = new URLSearchParams(location.search), api = q.get('api') || '', home = location.origin + location.pathname.replace(/[^/]*$/, '');
-  var ok = /^https:\/\/[a-z0-9-]+\.supabase\.co\/functions\/v1\/api$/.test(api) || /^http:\/\/localhost:\d+$/.test(api);
+  var ok = /^https:\/\/[a-z0-9-]+\.supabase\.co\/functions\/v1\/api$/.test(api) || api === 'https://api.potmos.kr/functions/v1/api' || /^http:\/\/localhost:\d+$/.test(api);   // 라운드 104: 사용자 지정 도메인
   if(!ok){ document.getElementById('t').textContent = '잘못된 주소예요 · 앱에서 다시 시도해 주세요'; document.getElementById('m').style.display = 'none'; return; }
   var u = api + '/auth/naver/start?back=' + encodeURIComponent(home) + (q.get('reauth') === '1' ? '&reauth=1' : '');   // 라운드 103: 로그아웃 뒤 첫 로그인
   document.getElementById('m').href = u;

@@ -36,7 +36,7 @@
 </div>
 <script>
 (function(){
-  const API_DEFAULT = 'https://neetxnkcmzwkxvircoxm.supabase.co/functions/v1/api';
+  const API_DEFAULT = 'https://api.potmos.kr/functions/v1/api';   // 라운드 104: Supabase 사용자 지정 도메인(옛 supabase.co 주소도 계속 동작)
   const q = new URLSearchParams(location.search), $ = id => document.getElementById(id);
   const get = k => { try{ return localStorage.getItem(k) || sessionStorage.getItem(k); }catch(e){ return null; } };
   if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
