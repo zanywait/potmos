@@ -3,7 +3,7 @@
    - 아이콘/매니페스트 등 정적 파일은 "캐시 우선".
    - API·다른 도메인 요청은 건드리지 않는다(서버 연결 시 데이터가 캐시되지 않도록).
    배포 후 캐시를 강제로 새로 받게 하려면 VERSION 만 올리면 된다. */
-const VERSION = 'potmos-v96';
+const VERSION = 'potmos-v97';
 const SHELL = [
   './',
   './index.html',
@@ -63,4 +63,23 @@ self.addEventListener('fetch', (e) => {
       return res;
     }))
   );
+});
+
+/* 라운드 112: 휴대폰 푸시 알림 — 서버(Web Push · aes128gcm)가 보낸 { title, body, tag, url } 을 알림으로 띄우고, 누르면 앱을 연다 */
+self.addEventListener('push', (e) => {
+  let d = {}; try { d = e.data ? e.data.json() : {}; } catch (err) { d = { body: e.data ? e.data.text() : '' }; }
+  const title = d.title || 'POTMOS';
+  e.waitUntil(self.registration.showNotification(title, {
+    body: d.body || '', tag: d.tag || 'potmos', renotify: !!d.tag, icon: './icons/icon-192.png', badge: './icons/icon-192.png',
+    data: { url: d.url || './' }, vibrate: [80, 40, 80],
+  }));
+});
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || './', self.location.href).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    const same = list.find((c) => c.url.split('#')[0] === url) || list[0];
+    if (same) { try { same.navigate && same.url.split('#')[0] !== url && same.navigate(url); } catch (err) {} return same.focus(); }
+    return self.clients.openWindow(url);
+  }));
 });
