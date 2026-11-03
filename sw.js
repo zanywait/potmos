@@ -3,13 +3,14 @@
    - 아이콘/매니페스트 등 정적 파일은 "캐시 우선".
    - API·다른 도메인 요청은 건드리지 않는다(서버 연결 시 데이터가 캐시되지 않도록).
    배포 후 캐시를 강제로 새로 받게 하려면 VERSION 만 올리면 된다. */
-const VERSION = 'potmos-v100';
+const VERSION = 'potmos-v101';
 const SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
   './manifest-supabase.webmanifest',
   './icons/icon-192.png',
+  './icons/badge-96.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
   './icons/favicon-32.png',
@@ -70,7 +71,7 @@ self.addEventListener('push', (e) => {
   let d = {}; try { d = e.data ? e.data.json() : {}; } catch (err) { d = { body: e.data ? e.data.text() : '' }; }
   const title = d.title || 'POTMOS';
   e.waitUntil(self.registration.showNotification(title, {
-    body: d.body || '', tag: d.tag || 'potmos', renotify: !!d.tag, icon: './icons/icon-192.png', badge: './icons/icon-192.png',
+    body: d.body || '', tag: d.tag || 'potmos', renotify: !!d.tag, icon: './icons/icon-192.png', badge: './icons/badge-96.png',
     data: { url: d.url || './' }, vibrate: [80, 40, 80],
   }));
 });
