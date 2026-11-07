@@ -3,7 +3,7 @@
    - 아이콘/매니페스트 등 정적 파일은 "캐시 우선".
    - API·다른 도메인 요청은 건드리지 않는다(서버 연결 시 데이터가 캐시되지 않도록).
    배포 후 캐시를 강제로 새로 받게 하려면 VERSION 만 올리면 된다. */
-const VERSION = 'potmos-v168';
+const VERSION = 'potmos-v169';
 const SHELL = [
   './',
   './index.html',
@@ -56,7 +56,7 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  const isStatic = /\.(png|jpe?g|webp|svg|ico|webmanifest)$/i.test(url.pathname);
+  const isStatic = /\.(png|jpe?g|webp|svg|ico|webmanifest|mp3)$/i.test(url.pathname);   // 라운드 166: assets/emb(내용 해시 이름) 이미지 · 배경음악도 캐시 우선
   if (!isStatic) return;
   e.respondWith(
     caches.match(req).then((hit) => hit || fetch(req).then((res) => {
