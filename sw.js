@@ -3,7 +3,17 @@
    - 아이콘/매니페스트 등 정적 파일은 "캐시 우선".
    - API·다른 도메인 요청은 건드리지 않는다(서버 연결 시 데이터가 캐시되지 않도록).
    배포 후 캐시를 강제로 새로 받게 하려면 VERSION 만 올리면 된다. */
-const VERSION = 'potmos-v171';
+const VERSION = 'potmos-v172';
+// 라운드 168: 내장 에셋(assets/emb · 이름 = 내용 해시라 바뀌지 않음)은 버전과 따로 오래 두는 캐시 — 앱을 업데이트해도 다시 받지 않는다
+const EMB = 'potmos-emb-1';
+const isEmb = (p) => /\/assets\/emb\/[0-9a-f]{12}\.(webp|png|jpg|mp3)$/i.test(p);
+async function warmEmb(){   // 설치 · 업데이트 뒤 한 번: 아직 없는 이미지만 조용히 받아 둔다(하나씩 · 실패는 다음에 다시)
+  try{
+    const c = await caches.open(EMB), r = await fetch('./assets/emb/manifest.json', { cache:'no-cache' }); if(!r.ok) return;
+    const list = await r.json();
+    for(const f of list){ const u = './assets/emb/' + f; if(await c.match(u)) continue; try{ const res = await fetch(u); if(res.ok) await c.put(u, res); }catch(e){} }
+  }catch(e){}
+}
 const SHELL = [
   './',
   './index.html',
@@ -27,8 +37,9 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION && k !== EMB).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
+      .then(() => { warmEmb(); })
   );
 });
 
@@ -56,7 +67,14 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  const isStatic = /\.(png|jpe?g|webp|svg|ico|webmanifest|mp3)$/i.test(url.pathname);   // 라운드 166: assets/emb(내용 해시 이름) 이미지 · 배경음악도 캐시 우선
+  if (isEmb(url.pathname)) {   // 라운드 168: 내장 에셋 = 오래 두는 캐시 우선 · 네트워크가 한 번 끊겨도 한 번 더 받아 본다
+    e.respondWith(caches.open(EMB).then((c) => c.match(req, { ignoreSearch:true }).then((hit) => hit || fetch(req).catch(() => fetch(req)).then((res) => {
+      if (res && res.ok && !url.search) c.put(req, res.clone());
+      return res;
+    }))));
+    return;
+  }
+  const isStatic = /\.(png|jpe?g|webp|svg|ico|webmanifest|mp3)$/i.test(url.pathname);   // 라운드 166: 그 밖의 정적 파일도 캐시 우선
   if (!isStatic) return;
   e.respondWith(
     caches.match(req).then((hit) => hit || fetch(req).then((res) => {
