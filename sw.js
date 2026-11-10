@@ -3,7 +3,7 @@
    - 아이콘/매니페스트 등 정적 파일은 "캐시 우선".
    - API·다른 도메인 요청은 건드리지 않는다(서버 연결 시 데이터가 캐시되지 않도록).
    배포 후 캐시를 강제로 새로 받게 하려면 VERSION 만 올리면 된다. */
-const VERSION = 'potmos-v180';
+const VERSION = 'potmos-v180r1';
 // 라운드 168: 내장 에셋(assets/emb · 이름 = 내용 해시라 바뀌지 않음)은 버전과 따로 오래 두는 캐시 — 앱을 업데이트해도 다시 받지 않는다
 const EMB = 'potmos-emb-1';
 const isEmb = (p) => /\/assets\/emb\/[0-9a-f]{12}\.(webp|png|jpg|mp3)$/i.test(p);
