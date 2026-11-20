@@ -3,7 +3,7 @@
    - 아이콘/매니페스트 등 정적 파일은 "캐시 우선".
    - API·다른 도메인 요청은 건드리지 않는다(서버 연결 시 데이터가 캐시되지 않도록).
    배포 후 캐시를 강제로 새로 받게 하려면 VERSION 만 올리면 된다. */
-const VERSION = 'potmos-v351';
+const VERSION = 'potmos-v355';
 // 라운드 168: 내장 에셋(assets/emb · 이름 = 내용 해시라 바뀌지 않음)은 버전과 따로 오래 두는 캐시 — 앱을 업데이트해도 다시 받지 않는다
 const EMB = 'potmos-emb-1';
 const isEmb = (p) => /\/assets\/emb\/[0-9a-f]{12}\.(webp|png|jpg|mp3)$/i.test(p);
@@ -13,7 +13,10 @@ let warming = null;
 async function warmEmb(files){
   try{
     const c = await caches.open(EMB);
-    for(const f of files){ if(!/^[0-9a-f]{12}\.(webp|png|jpg|mp3)$/i.test(f)) continue; const u = './assets/emb/' + f; if(await c.match(u)) continue; try{ const res = await fetch(u); if(res.ok) await c.put(u, res); }catch(e){} }
+    const cv = await caches.open(VERSION);   // 라운드 369: 퀴즈 · 여행 배경 · 도움말 그림(이름이 그대로라 버전 캐시에 · 새 버전이면 다시 받음)
+    for(const f of files){
+      if(/^assets\/(quiz|explore|help)\/[\w-]+\.(webp|png|jpg)$/i.test(f)){ const u = './' + f; if(await caches.match(u)) continue; try{ const res = await fetch(u); if(res.ok) await cv.put(u, res); }catch(e){} continue; }
+      if(!/^[0-9a-f]{12}\.(webp|png|jpg|mp3)$/i.test(f)) continue; const u = './assets/emb/' + f; if(await c.match(u)) continue; try{ const res = await fetch(u); if(res.ok) await c.put(u, res); }catch(e){} }
   }catch(e){}
 }
 self.addEventListener('message', (e) => {
