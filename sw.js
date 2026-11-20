@@ -3,17 +3,23 @@
    - 아이콘/매니페스트 등 정적 파일은 "캐시 우선".
    - API·다른 도메인 요청은 건드리지 않는다(서버 연결 시 데이터가 캐시되지 않도록).
    배포 후 캐시를 강제로 새로 받게 하려면 VERSION 만 올리면 된다. */
-const VERSION = 'potmos-v180r6';
+const VERSION = 'potmos-v346';
 // 라운드 168: 내장 에셋(assets/emb · 이름 = 내용 해시라 바뀌지 않음)은 버전과 따로 오래 두는 캐시 — 앱을 업데이트해도 다시 받지 않는다
 const EMB = 'potmos-emb-1';
 const isEmb = (p) => /\/assets\/emb\/[0-9a-f]{12}\.(webp|png|jpg|mp3)$/i.test(p);
-async function warmEmb(){   // 설치 · 업데이트 뒤 한 번: 아직 없는 이미지만 조용히 받아 둔다(하나씩 · 실패는 다음에 다시)
+/* 라운드 340(대표님 2026-11-18 '다이어트'): 설치 · 업데이트 때 전체(약 40MB · 4세계)를 미리 받던 것을 없앰.
+   그림은 처음 볼 때 받아 두고(아래 fetch), 앱이 '와이파이 · 데이터 절약 아님 · 쉬는 때'에 입장한 세계 + 공통 몫만 목록으로 보내면(warm 메시지) 아직 없는 것만 하나씩 받음 */
+let warming = null;
+async function warmEmb(files){
   try{
-    const c = await caches.open(EMB), r = await fetch('./assets/emb/manifest.json', { cache:'no-cache' }); if(!r.ok) return;
-    const list = await r.json();
-    for(const f of list){ const u = './assets/emb/' + f; if(await c.match(u)) continue; try{ const res = await fetch(u); if(res.ok) await c.put(u, res); }catch(e){} }
+    const c = await caches.open(EMB);
+    for(const f of files){ if(!/^[0-9a-f]{12}\.(webp|png|jpg|mp3)$/i.test(f)) continue; const u = './assets/emb/' + f; if(await c.match(u)) continue; try{ const res = await fetch(u); if(res.ok) await c.put(u, res); }catch(e){} }
   }catch(e){}
 }
+self.addEventListener('message', (e) => {
+  const d = e.data || {};
+  if (d.type === 'warm' && Array.isArray(d.files)) { if (warming) return; warming = warmEmb(d.files.slice(0, 2000)).finally(() => { warming = null; }); e.waitUntil(warming); }
+});
 const SHELL = [
   './',
   './index.html',
@@ -39,7 +45,6 @@ self.addEventListener('activate', (e) => {
     caches.keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== VERSION && k !== EMB).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
-      .then(() => { warmEmb(); })
   );
 });
 
