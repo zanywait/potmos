@@ -1,0 +1,17 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>POTMOS 임시 확인</title></head><body style="font-family:sans-serif;padding:24px">
+<p style="color:#b00020;font-weight:700">임시 확인 페이지 (2026-11-27 · 화면 캡처 뒤 삭제)</p>
+<button id="go" style="font-size:18px;padding:12px 20px">본인인증 창 열기</button>
+<pre id="out"></pre>
+<script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+<script>
+document.getElementById('go').addEventListener('click', async () => {
+  const out = document.getElementById('out');
+  try{
+    const id = 'potmos-idv-shot-' + Date.now().toString(36);
+    const r = await window.PortOne.requestIdentityVerification({ storeId:'store-bf594db7-e86f-4557-9bdf-d3c448d077ba', channelKey:'channel-key-01b466c4-f40e-4de5-a4be-a4dafb64fdb7', identityVerificationId:id,
+      redirectUrl:location.origin + location.pathname, bypass:{ inicisUnified:{ flgFixedUser:'N' } } });
+    out.textContent = JSON.stringify(r);
+  }catch(e){ out.textContent = 'ERR ' + (e && e.message); }
+});
+</script></body></html>
